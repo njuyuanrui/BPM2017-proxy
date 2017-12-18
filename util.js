@@ -8,7 +8,13 @@ var get_client_ip = function(req) {
     if(ip.split(',').length>0){
         ip = ip.split(',')[0]
     }
+    arr = ip.split(':');
+    if(arr.length>0){
+        ip = arr[arr.length-1];
+    }
+
     return ip;
 };
+
 
 exports.getIP = get_client_ip;

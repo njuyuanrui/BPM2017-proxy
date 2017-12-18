@@ -62,6 +62,7 @@ app.get('/register/:mobile', function(req, res, next) {
 
 app.get('/traffic/:mobile', function(req, res, next) {
     ip = util.getIP(req);
+    console.log(ip);
     result = {
         errno:0,
         traffic:-1,
@@ -164,7 +165,7 @@ app.post('/update', jsonParser, function(req, res, next) {
 });
 
 
-var server = app.listen(3000, function () {
+var server = app.listen(3000,'0.0.0.0', function () {
     var host = server.address().address;
     var port = server.address().port;
 
