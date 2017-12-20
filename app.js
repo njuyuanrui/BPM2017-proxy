@@ -60,7 +60,7 @@ app.get('/register/:mobile', function(req, res, next) {
 
 });
 
-app.get('/traffic/:mobile', function(req, res, next) {
+app.get('/traffic', function(req, res, next) {
     ip = util.getIP(req);
     console.log(ip);
     result = {
@@ -72,11 +72,11 @@ app.get('/traffic/:mobile', function(req, res, next) {
         if (val) {
             cache.expire(ip, 100);
             result.traffic=val;
-            data = JSON.stringify(result);
-            res.send(data);
         } else {
-            res.send("no connection");
+            result.errno = 1;
         }
+        data = JSON.stringify(result);
+        res.send(data);
     });
 
 
