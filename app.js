@@ -53,15 +53,18 @@ app.get('/register/:mobile', function(req, res, next) {
     console.log('@@@@@@@@@@@@@register ' + ip);
 
     if(ip){
-        console.log('@@@@@@@@@@@@@register ' + ip+  '  '+mobile);
         request('http://202.120.40.28:88/index.php?r=user/get-user-info-by-mobile&mobile='+mobile, function (error, response, body) {
             console.log('@@@@@@@@@@@@@http get ' + body);
             record = JSON.parse(body);
             traffic =  record['traffic']*1024*1024;
             result['traffic'] = traffic;
             cache.hmset(ip, 'mobile',mobile, 'traffic',traffic, (err, res) => {
+
+                cache.set(ip+'canary',1);
+                client.expire(ip+'canary', 100);
+
                 console.log('set'+ mobile + ' '+ traffic + " ip: " + ip);
-                cache.expire(mobile, 10000);
+                //cache.expire(mobile, 100);
             });
             console.log('@@@@@@@@@@@@@register ' + ip);
             res.send(JSON.stringify(result));
@@ -89,7 +92,7 @@ app.get('/traffic', function(req, res, next) {
 
     cache.hget(ip,'traffic', (err, val) => {
         if (val) {
-            cache.expire(ip, 10000);
+            cache.expire(ip+"canary", 100);
             result.traffic=(val*1.0/(1024*1024)).toFixed(2);
         } else {
             result.errno = 1;
@@ -103,7 +106,6 @@ app.get('/traffic', function(req, res, next) {
 
 app.post('/close', jsonParser, function(req, res) {
     ip = req.header('resIp');
-    //ip = util.getIP(req);
 
     result = {
         errno:0,
@@ -169,7 +171,7 @@ app.post('/update', jsonParser, function(req, res, next) {
                     traffic = body.traffic*1024*1024;
                     cache.hmset(ip,'mobile',mobileID,'traffic', traffic, (err, resp) => {
                         console.log('hmset'+ip+' '+ mobileID + ' '+ traffic);
-                        cache.expire(ip, 10000);
+                        cache.expire(ip+"canary", 100);
                         result.traffic=(traffic*1.0/(1024*1024)).toFixed(2);
                         console.log('upd successfully');
                         res.send(result);

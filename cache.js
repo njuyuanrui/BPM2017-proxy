@@ -1,5 +1,5 @@
 const redis  = require('redis');
-
+var request = require('request');
 const expire = 60;
 
 var redis_config = {
@@ -31,7 +31,31 @@ const redisObj = {
         this.connect(); // 创建连接
         this.observer.psubscribe('__keyevent@' + 0 +'__:expired');
         this.observer.on("pmessage", function (pattern, channel, expiredKey) {
-            console.log('expiredKey');
+
+            client.hgetall(expiredKey.substring(0,expiredKey.indexOf('c')), (err, obj) => {
+
+                requestData = {
+                    mobile:obj.mobile,
+                    traffic:obj.traffic*1.0/(1024*1024),
+                }
+                console.log(requestData);
+                request({
+                    url: 'http://202.120.40.28:88/index.php?r=user/update-user-info',
+                    method: "POST",
+                    json: true,
+                    headers: {
+                        "content-type": "application/json",
+                    },
+                    body: JSON.stringify(requestData)
+                }, function(error, response, body) {
+                    if (!error && response.statusCode == 200) {
+                        client.del(ip);
+                        console.log(body);
+                        console.log('del successfully');
+                    }
+                });
+            });
+
         });
         const instance = this.client;
 
