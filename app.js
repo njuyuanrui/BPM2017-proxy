@@ -16,7 +16,7 @@ const options = {
     },
     throttle: 10000,
     forceProxyHttps: false,
-    silent: false
+    silent: true
 };
 
 const proxyServer = new AnyProxy.ProxyServer(options);
@@ -45,23 +45,42 @@ app.get('/register/:mobile', function(req, res, next) {
     result = {
         errno: 0,
     }
+
+    mobile = req.params.mobile;
+    //ip = util.getIP(req);
+    ip = req.header('resIp');
+
+    console.log('@@@@@@@@@@@@@register ' + ip);
+
+    if(ip){
+        console.log('@@@@@@@@@@@@@register ' + ip+  '  '+mobile);
+        request('http://202.120.40.28:88/index.php?r=user/get-user-info-by-mobile&mobile='+mobile, function (error, response, body) {
+            console.log('@@@@@@@@@@@@@http get ' + body);
+            record = JSON.parse(body);
+            traffic =  record['traffic']*1024*1024;
+            result['traffic'] = traffic;
+            cache.hmset(ip, 'mobile',mobile, 'traffic',traffic, (err, res) => {
+                console.log('set'+ mobile + ' '+ traffic + " ip: " + ip);
+                cache.expire(mobile, 10000);
+            });
+            console.log('@@@@@@@@@@@@@register ' + ip);
+            res.send(JSON.stringify(result));
+        })
+
+    }else{
+        result['errno'] = 1;
+        res.send(JSON.stringify(result));
+    }
+
+
     mobile = req.params.mobile;
 
-    request('http://127.0.0.1:1234/index.php?r=user/get-user-info-by-mobile&mobile='+mobile, function (error, response, body) {
-        record = JSON.parse(body);
-        traffic =  record['traffic'];
-        result['traffic'] = traffic;
-        cache.hmset(util.getIP(req), 'mobile',mobile, 'traffic',record['traffic'], (err, res) => {
-            console.log('set'+ mobile + ' '+ traffic + " ip: " + util.getIP(req));
-            cache.expire(mobile, 100);
-        });
-        res.send(JSON.stringify(result));
-    })
 
 });
 
 app.get('/traffic', function(req, res, next) {
-    ip = util.getIP(req);
+    //ip = util.getIP(req);
+    ip = req.header('resIp');
     console.log(ip);
     result = {
         errno:0,
@@ -70,8 +89,8 @@ app.get('/traffic', function(req, res, next) {
 
     cache.hget(ip,'traffic', (err, val) => {
         if (val) {
-            cache.expire(ip, 100);
-            result.traffic=val;
+            cache.expire(ip, 10000);
+            result.traffic=(val*1.0/(1024*1024)).toFixed(2);
         } else {
             result.errno = 1;
         }
@@ -83,8 +102,8 @@ app.get('/traffic', function(req, res, next) {
 });
 
 app.post('/close', jsonParser, function(req, res) {
-
-    ip = util.getIP(req);
+    ip = req.header('resIp');
+    //ip = util.getIP(req);
 
     result = {
         errno:0,
@@ -95,11 +114,11 @@ app.post('/close', jsonParser, function(req, res) {
         if (obj) {
             requestData = {
                 mobile:obj.mobile,
-                traffic:obj.traffic,
+                traffic:obj.traffic*1.0/(1024*1024),
             }
             console.log(requestData);
             request({
-                url: 'http://localhost:1234/index.php?r=user/update-user-info',
+                url: 'http://202.120.40.28:88/index.php?r=user/update-user-info',
                 method: "POST",
                 json: true,
                 headers: {
@@ -123,8 +142,8 @@ app.post('/close', jsonParser, function(req, res) {
 });
 
 app.post('/update', jsonParser, function(req, res, next) {
-    ip = util.getIP(req);
-
+    //ip = util.getIP(req);
+    ip = req.header('resIp');
     result = {
         errno:0,
     };
@@ -135,10 +154,10 @@ app.post('/update', jsonParser, function(req, res, next) {
             mobileID =obj.mobile;
             requestData = {
                 mobile : mobileID,
-                traffic : obj.traffic,
+                traffic : obj.traffic*1.0/(1024*1024),
             }
             request({
-                url: 'http://localhost:1234/index.php?r=user/update-and-get-user-info',
+                url: 'http://202.120.40.28:88/index.php?r=user/update-and-get-user-info',
                 method: "POST",
                 json: true,
                 headers: {
@@ -147,11 +166,11 @@ app.post('/update', jsonParser, function(req, res, next) {
                 body: JSON.stringify(requestData)
             }, function(error, response, body) {
                 if (!error && response.statusCode == 200) {
-                    traffic = body.traffic;
+                    traffic = body.traffic*1024*1024;
                     cache.hmset(ip,'mobile',mobileID,'traffic', traffic, (err, resp) => {
                         console.log('hmset'+ip+' '+ mobileID + ' '+ traffic);
-                        cache.expire(ip, 100);
-                        result.traffic=traffic;
+                        cache.expire(ip, 10000);
+                        result.traffic=(traffic*1.0/(1024*1024)).toFixed(2);
                         console.log('upd successfully');
                         res.send(result);
                     });
