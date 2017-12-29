@@ -24,6 +24,20 @@ exports.beforeSendRequest = function* (requestDetail){
 
     IP = util.getIP(requestDetail._req);
 
+    if(requestDetail.url.indexOf('sina.com')>0){
+        response =  {
+            response: {
+                statusCode: 200,
+                header: {'Content-Type': 'text/html'},
+                body: "<html>\n" +
+                "<head><style type=\"text/css\">.block{height: 880px;line-height:880px;text-align: center;}</style>\n" +
+                "</head><body><div class=\"block\" ><font size=\"7\" face=\"arial\" color=\"#A23400\">This sensitive site has been blocked!</div></body></html>"
+            }
+        };
+        return response;
+    }
+
+
     if(requestDetail.url.indexOf('192.168.191.1')>0){
         const newRequestOptions = requestDetail.requestOptions;
         newRequestOptions.headers['resIp'] = IP;
@@ -44,11 +58,11 @@ exports.beforeSendResponse = function* (requestDetail, responseDetail) {
     response = -1;
 
     client.hget(IP,'traffic', (err, val) => {
-        client.expire(IP, 100);
+        client.expire(IP+"canary", 100);
+        val = parseInt(val);
+        console.log('response: ' + IP + "size "+ size + "val :" + val);
 
-        console.log('response: ' + IP + "size "+ size );
-
-        if (val) {
+        if (val>=0) {
             if(val < size){
                 client.hset(IP,'traffic',0);
                 console.log('lack of traffic ');
@@ -64,7 +78,7 @@ exports.beforeSendResponse = function* (requestDetail, responseDetail) {
                 };
             }else{
                 client.hset(IP,'traffic',val-size);
-                console.log('success');
+                console.log('success ' + (val-size));
                 response = null;
             }
 

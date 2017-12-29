@@ -1,5 +1,7 @@
 var request = require('request');
 
+const outerServer = "http://192.168.191.3:1234";
+
 // ===================redis=====================
 const cache = require('./cache');
 
@@ -53,11 +55,11 @@ app.get('/register/:mobile', function(req, res, next) {
     console.log('@@@@@@@@@@@@@register ' + ip);
 
     if(ip){
-        request('http://202.120.40.28:88/index.php?r=user/get-user-info-by-mobile&mobile='+mobile, function (error, response, body) {
+        request( outerServer+'/index.php?r=user/get-user-info-by-mobile&mobile='+mobile, function (error, response, body) {
             console.log('@@@@@@@@@@@@@http get ' + body);
             record = JSON.parse(body);
-            traffic =  record['traffic']*1024*1024;
-            result['traffic'] = traffic;
+            traffic =  (record['traffic']*1024*1024).toFixed(2);
+            result['traffic'] =  record['traffic'];
             cache.hmset(ip, 'mobile',mobile, 'traffic',traffic, (err, res) => {
 
                 cache.set(ip+'canary',1);
@@ -67,6 +69,7 @@ app.get('/register/:mobile', function(req, res, next) {
                 //cache.expire(mobile, 100);
             });
             console.log('@@@@@@@@@@@@@register ' + ip);
+            console.log(JSON.stringify(result));
             res.send(JSON.stringify(result));
         })
 
@@ -120,7 +123,7 @@ app.post('/close', jsonParser, function(req, res) {
             }
             console.log(requestData);
             request({
-                url: 'http://202.120.40.28:88/index.php?r=user/update-user-info',
+                url: outerServer+'/index.php?r=user/update-user-info',
                 method: "POST",
                 json: true,
                 headers: {
@@ -159,7 +162,7 @@ app.post('/update', jsonParser, function(req, res, next) {
                 traffic : obj.traffic*1.0/(1024*1024),
             }
             request({
-                url: 'http://202.120.40.28:88/index.php?r=user/update-and-get-user-info',
+                url: outerServer+'/index.php?r=user/update-and-get-user-info',
                 method: "POST",
                 json: true,
                 headers: {
@@ -215,24 +218,5 @@ module.exports = app;
 
 
 
-// var favicon = require('serve-favicon');
-// var logger = require('morgan');
-// var cookieParser = require('cookie-parser');
 
-
-// var index = require('./routes/index');
-
-// view engine setup
-
-// uncomment after placing your favicon in /public
-//app.use(favicon(path.join(__dirname, 'public', 'favicon.ico')));
-// app.use(logger('dev'));
-// app.use(bodyParser.json());
-// app.use(bodyParser.urlencoded({ extended: false }));
-// app.use(cookieParser());
-// app.use(express.static(path.join(__dirname, 'public')));
-
-
-
-// error handler
 
